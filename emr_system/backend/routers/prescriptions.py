@@ -206,6 +206,40 @@ def get_patient_prescriptions(
 
 
 # ============================================================
+# AVAILABLE STOCK FOR DOCTOR FORM
+# Excludes quantities still reserved by pending prescriptions.
+# ============================================================
+
+@router.get("/availability/{item_id}")
+def prescription_availability(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    item = db.query(InventoryItem).filter(
+        InventoryItem.item_id == item_id,
+        InventoryItem.is_active == True
+    ).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Medicine or supply not found or inactive.")
+
+    pending = db.query(MedicalRecordPrescription).filter(
+        MedicalRecordPrescription.item_id == item_id,
+        MedicalRecordPrescription.status == "pending"
+    ).all()
+    reserved = sum(max(0, int(p.quantity or 0) - int(p.dispensed_quantity or 0)) for p in pending)
+    available = max(0, int(item.current_stock or 0) - reserved)
+    return {
+        "item_id": item.item_id,
+        "item_name": item.item_name,
+        "current_stock": int(item.current_stock or 0),
+        "reserved_quantity": reserved,
+        "available_stock": available,
+        "unit": item.unit
+    }
+
+
+# ============================================================
 # CREATE PRESCRIPTION — DOCTOR ONLY
 # ============================================================
 
@@ -289,6 +323,19 @@ async def create_prescription(
         raise HTTPException(
             status_code=404,
             detail="Inventory item not found or inactive."
+        )
+
+    # Prevent over-prescribing, including quantities reserved by other pending prescriptions.
+    pending = db.query(MedicalRecordPrescription).filter(
+        MedicalRecordPrescription.item_id == item_id,
+        MedicalRecordPrescription.status == "pending"
+    ).all()
+    reserved = sum(max(0, int(p.quantity or 0) - int(p.dispensed_quantity or 0)) for p in pending)
+    available = max(0, int(item.current_stock or 0) - reserved)
+    if quantity > available:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient stock for {item.item_name}. Requested: {quantity}; available: {available}. Reduce the quantity or select another medicine."
         )
 
     # --------------------------------------------------------

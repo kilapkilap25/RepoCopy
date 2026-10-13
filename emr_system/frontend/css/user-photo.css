@@ -1,0 +1,65 @@
+/* ============================================================
+   Staff photos (user-photo.js) — small, neutral, no new colors
+   ============================================================ */
+.up-thumb { width: 34px; height: 34px; min-width: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #dce5f5; color: #0b1f4b; font-size: 12px; font-weight: 700; overflow: hidden; flex-shrink: 0; vertical-align: middle; margin-right: 10px; user-select: none; }
+.up-av-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.up-namecell { display: flex; align-items: center; }
+
+/* buttons + messages */
+.up-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.up-ctrl.center { justify-content: center; }
+.up-btn { font: inherit; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 8px; border: 1px solid #0b1f4b; background: #0b1f4b; color: #fff; cursor: pointer; line-height: 1.4; display: inline-flex; align-items: center; gap: 6px; }
+.up-btn:hover { opacity: .9; }
+.up-btn:focus-visible { outline: 2px solid #2255c4; outline-offset: 2px; }
+.up-btn.light { background: #fff; color: #0b1f4b; border-color: #c9d3e6; }
+.up-btn[hidden] { display: none; }
+.up-hint, .up-status { font-size: 11.5px; color: #6b7fa8; line-height: 1.5; text-align: center; margin-top: 6px; }
+.up-status:empty { display: none; }
+.up-status.err { color: #8a1c1c; }
+
+/* My Profile: the avatar card is centered, the photo section sits at the end of the Profile Info tab */
+.up-card-center { flex-direction: column !important; text-align: center; gap: 10px !important; }
+.up-av-lg { width: 96px !important; height: 96px !important; font-size: 36px !important; margin: 0 auto; }
+.up-photo-group { margin: 0; padding: 0; text-align: center; width: 100%; }
+.up-hide { display: none !important; }
+
+/* Edit Staff (admin): photo block centered at the top */
+.up-staff { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid #e3e8f2; }
+.up-prev { width: 96px; height: 96px; min-width: 96px; border-radius: 50%; background: #dce5f5; color: #0b1f4b; font-size: 34px; font-weight: 700; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 12px; }
+
+/* camera window */
+#upCam { position: fixed; inset: 0; z-index: 100001; background: rgba(11, 31, 75, .55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.up-cam-card { background: #fff; border-radius: 14px; padding: 16px; width: min(92vw, 420px); box-shadow: 0 20px 50px rgba(0, 0, 0, .3); }
+.up-cam-title { font-size: 15px; font-weight: 700; color: #0b1f4b; margin-bottom: 12px; text-align: center; }
+.up-cam-stage { position: relative; aspect-ratio: 4 / 3; background: #0b1f4b; border-radius: 10px; overflow: hidden; }
+.up-cam-stage video, .up-cam-stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.up-cam-stage video { transform: scaleX(-1); }            /* mirror preview, like a selfie */
+.up-cam-stage [hidden] { display: none; }
+.up-cam-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; color: #fff; font-size: 13px; line-height: 1.5; }
+.up-cam-msg.err { color: #ffd9d6; }
+.up-cam-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+
+/* ============================================================
+   Scrolling for the windows that hold a photo block:
+   only the BODY scrolls. The header and footer stay in place and the
+   box keeps its rounded corners (no scrollbar on the box itself).
+   (Keeps your existing .modal max-height: 90vh.)
+   ============================================================ */
+#editProfileModal > .modal,
+#editStaffModal > .modal,
+#addPatientModal > .modal,
+#editPatientModal > .modal { display: flex; flex-direction: column; overflow: hidden; }
+
+#editProfileModal > .modal > .modal-header,
+#editStaffModal > .modal > .modal-header,
+#addPatientModal > .modal > .modal-header,
+#editPatientModal > .modal > .modal-header,
+#editProfileModal > .modal > .modal-footer,
+#editStaffModal > .modal > .modal-footer,
+#addPatientModal > .modal > .modal-footer,
+#editPatientModal > .modal > .modal-footer { position: static; flex: 0 0 auto; }
+
+#editProfileModal > .modal > .modal-body,
+#editStaffModal > .modal > .modal-body,
+#addPatientModal > .modal > .modal-body,
+#editPatientModal > .modal > .modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }

@@ -15,6 +15,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="/frontend/css/dashboard.css">
+    <link rel="stylesheet" href="/frontend/css/report-preview.css">
+    <link rel="stylesheet" href="/frontend/css/user-photo.css">
     <!-- FontAwesome self-hosted (see /frontend/vendor/fontawesome) so extensions/adblockers can't block it -->
     <link rel="stylesheet" href="/frontend/vendor/fontawesome/css/all.min.css">
 </head>
@@ -54,7 +56,7 @@
             <span>AI Insights</span>
         </a>
         <div class="nav-label admin-only">Logistics & Staff</div>
-        <a class="nav-link" href="/frontend/pages/inventory.html" id="forInventory">
+        <a class="nav-link admin-only" href="/frontend/pages/inventory.html" id="forInventory">
             <span class="nav-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
             <span>Inventory</span>
         </a>
@@ -97,9 +99,9 @@
 </button>
 
 <!-- Floating Action Button — only shown while AI Insights tab is active -->
-<button class="fab" id="aiFab" onclick="printAIInsights()" title="Export / Print" aria-label="Export / Print">
+<!-- <button class="fab" id="aiFab" onclick="printAIInsights()" title="Export / Print" aria-label="Export / Print">
     <i class="fa-solid fa-print"></i>
-</button>
+</button> -->
 
 <!-- MAIN -->
 <main class="main">
@@ -114,9 +116,9 @@
         <div class="tb-date" id="dateDisplay">—</div>
         <span class="tb-role" id="dashRoleBadge">—</span>
         <!-- New Mode Toggle Button -->
-        <button class="tb-icon-btn" onclick="openModal('')" aria-label="Notification" title="Notification">
+        <!-- <button class="tb-icon-btn" onclick="openModal('')" aria-label="Notification" title="Notification">
             <i class="fas fa-bell"></i>
-        </button>
+        </button> -->
     
         <button class="tb-icon-btn" onclick="openModal('helpModal')" aria-label="Help & info" title="Help & info">
             <i class="fa-regular fa-circle-question" aria-hidden="true"></i>
@@ -220,18 +222,8 @@
             <div class="sec-title">Disease Surveillance</div>
             <div class="sec-sub">Auto-counted from patient diagnosis entries</div>
         </div>
-        <div class="date-range-picker" id="survDateRange">
-            <div class="dr-field">
-                <i class="fa-regular fa-calendar dr-icon"></i>
-                <input type="text" class="dr-input" id="survStartDate" aria-label="Start date">
-            </div>
-            <span class="dr-to">to</span>
-            <div class="dr-field">
-                <i class="fa-regular fa-calendar dr-icon"></i>
-                <input type="text" class="dr-input" id="survEndDate" aria-label="End date">
-            </div>
-        </div>
     </div>
+    
     <!-- Disease Surveillance Hub (live guard) -->
     <div class="sec-sub" style="font-weight:600;margin:4px 0 10px;color:var(--text)">Live Disease Guard
         <span id="hubWeekLabel" style="font-weight:400;color:var(--muted);margin-left:8px"></span></div>
@@ -245,23 +237,39 @@
         <div class="stat-card teal"><div class="stat-icon"><i class="fa-solid fa-shield-halved"></i></div>
             <div class="stat-value" id="hubPidsr" style="font-size:18px">—</div><div class="stat-label">DOH PIDSR Sync Status</div></div>
     </div>
-    <!-- <div class="stats-grid" id="survStats"></div> -->
     
-    <div class="card" style="margin-bottom:18px"><div class="card-body3" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:12.5px">
-        <strong>Threshold :</strong>
-        <select class="lv-select" id="hubMethod" style="margin-left:0" onchange="onHubMethodChange()">
-            <option value="computed">Computed from history</option><option value="fixed">Fixed values</option></select>
-        <label id="hubBaseWrap">Baseline : <select class="lv-select" id="hubBaseline" style="margin-left:0" onchange="loadSurvHub()">
-            <option value="4">4 wk</option><option value="8" selected>8 wk</option><option value="12">12 wk</option></select></label>
-        <button class="btn btn-outline btn-sm" type="button" onclick="toggleHubAdvanced()"><i class="fa-solid fa-sliders"></i> Advanced</button>
-        <div id="hubAdvanced" style="display:none;width:100%">
-            <span id="hubComputedOpts">Alert = mean + <input type="number" id="hubAlertSd" value="1" min="0" max="5" step="0.5" class="hub-num"> SD ·
-                Epidemic = mean + <input type="number" id="hubEpiSd" value="2" min="0" max="10" step="0.5" class="hub-num"> SD ·
-                Min cases <input type="number" id="hubMin" value="3" min="1" class="hub-num"></span>
-            <span id="hubFixedOpts" style="display:none">Alert ≥ <input type="number" id="hubAlertFixed" value="5" min="1" class="hub-num"> ·
-                Epidemic ≥ <input type="number" id="hubEpiFixed" value="10" min="1" class="hub-num"> cases / week</span>
-            <button class="btn btn-outline btn-sm" type="button" onclick="loadSurvHub()">Apply</button>
+    <div class="card" style="margin-bottom:18px;overflow:visible"><div class="card-body3" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:12.5px">
+    <strong>Threshold<span class="hint" tabindex="0" data-tip="How alert levels are set. 'Computed from history' learns each disease's usual weekly cases. 'Fixed values' uses the same case counts for every disease.">?</span> :</strong>
+    <select class="lv-select" id="hubMethod" style="margin-left:0" onchange="onHubMethodChange()">
+        <option value="computed">Computed from history</option><option value="fixed">Fixed values</option></select>
+    <label id="hubBaseWrap">Baseline <span class="hint" tabindex="0" data-tip="How many past weeks (not counting this one) are used to work out a disease's usual weekly cases. Weeks run Sunday to Saturday." onclick="event.preventDefault()">?</span> : <select class="lv-select" id="hubBaseline" style="margin-left:0" onchange="loadSurvHub()">
+        <option value="4">4 wk</option><option value="8" selected>8 wk</option><option value="12">12 wk</option></select></label>
+
+    <div id="hubAdvanced" class="hub-adv" style="display:none">
+        <div>
+            <span id="hubComputedOpts">Alert <span class="hint" tabindex="0" data-tip="Alert level = the usual weekly cases (mean) plus this many standard deviations (SD, how much the weekly count normally varies). Lower = more sensitive, more alerts.">?</span>  = mean + <input type="number" id="hubAlertSd" value="1" min="0" max="5" step="0.5" class="hub-num"> SD  
         </div>
+        <div>
+            Epidemic<span class="hint" tabindex="0" data-tip="Epidemic level = the mean plus this many SDs. It is never set lower than the Alert level.">?</span> = mean + <input type="number" id="hubEpiSd" value="2" min="0" max="10" step="0.5" class="hub-num"> SD 
+        </div>
+        <div>
+            Min cases<span class="hint" tabindex="0" data-tip="Lowest allowed Alert or Epidemic level, so a disease with only 1-2 cases a week does not trigger alarms.">?</span></span> <input type="number" id="hubMin" value="3" min="1" class="hub-num">
+        </div>
+        <div id="hubFixedOpts" style="display:none">
+            <div>
+                Alert ≥ <input type="number" id="hubAlertFixed" value="5" min="1" class="hub-num"> ·
+            </div>
+            <div>
+                Epidemic ≥ <input type="number" id="hubEpiFixed" value="10" min="1" class="hub-num"> cases / week<span class="hint" tabindex="0" data-tip="Flag as Epidemic when a disease reaches this many cases in one week.">?</span>
+            </div>
+        </div>
+        <button class="btn btn-outline btn-sm" type="button" title="Recalculate using the values on the left" onclick="loadSurvHub()">Apply<button>
+    </div>
+
+    <button id="hubAdvBtn" class="btn btn-outline btn-sm btn-adv" type="button" onclick="toggleHubAdvanced()"
+        style="margin-left:auto" title="Advanced settings" aria-label="Advanced settings" aria-expanded="false">
+    <i class="fa-solid fa-sliders"></i><span class="adv-label"> Advanced</span>
+</button>
     </div></div>
     <div class="grid-2" style="margin-bottom:18px">
         <div class="card">
@@ -465,7 +473,6 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>#</th>
                             <th>Name</th>
                             <th>Email</th>
                             <th>Role</th>
@@ -487,28 +494,30 @@
     <div class="sec-header">
         <div>
             <div class="sec-title">Reports &amp; Export</div>
-            <div class="sec-sub">Generate and download official health reports in PDF format</div>
+            <div class="sec-sub">Generate a report, preview it, then print it or save it as PDF</div>
         </div>
         <div style="font-size:12px;color:var(--muted);background:var(--card);padding:6px 14px;border-radius:20px;border:1px solid var(--border)">Admin access only</div>
     </div>
 
     <!-- Central Date Filter Row -->
     <div class="card" style="margin-bottom:14px">
-        <div class="card-body" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+        <div class="card-body3" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
             <i class="fa-regular fa-calendar" style="color:var(--muted)"></i>
             <strong style="font-size:13px">Filter export range:</strong>
-            <input type="date" id="reportStartDate" aria-label="Start date"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font:inherit;font-size:13px">
-            <span style="font-size:13px;color:var(--muted)">to</span>
-            <input type="date" id="reportEndDate" aria-label="End date"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font:inherit;font-size:13px">
             <select id="quickPresets" aria-label="Quick presets"
-                    style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font:inherit;font-size:13px">
-                <option value="custom">Custom</option>
-                <option value="this_month" selected>This Month</option>
-                <option value="last_7_days">Last 7 Days</option>
-                <option value="this_year">This Year</option>
+                    style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font:inherit;font-size:13px;">
+                    <option value="last_7_days" selected>Last 7 Days</option>
+                    <option value="this_month" >This Month</option>
+                    <option value="this_year">This Year</option>
+                    <option value="custom">Custom</option>
             </select>
+            <div id="reportDateRange" style="display: none; margin-left: auto;">
+                <input type="date" id="reportStartDate" aria-label="Start date"
+                    style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font:inherit;font-size:13px">
+                <span style="font-size:13px;color:var(--muted)">to</span>
+                <input type="date" id="reportEndDate" aria-label="End date"
+                    style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font:inherit;font-size:13px">
+            </div>
         </div>
     </div>
     <div class="reports-layout">
@@ -522,7 +531,7 @@
             </div>
             <div class="card-body">
                 <p>Generates a list based on the chosen date range boundaries set above.</p>
-                <div class="report-actions"><button class="btn btn-sm" style="background:var(--blue);color:#fff" onclick="dlReport('patients')">Download PDF</button></div>
+                <div class="report-actions"><button class="btn btn-sm" style="background:var(--blue);color:#fff" onclick="openReportPreview('patients')"><i class="fa-regular fa-eye" style="margin-right:6px"></i>Generate Report Patient Records</button></div>
             </div>
         </div>
 
@@ -536,7 +545,7 @@
             </div>
             <div class="card-body">
                 <p>Analyzes active case metrics captured within the dates selected above.</p>
-                <div class="report-actions"><button class="btn btn-sm" style="background:var(--red);color:#fff" onclick="dlReport('disease-timeline')">Download PDF</button></div>
+                <div class="report-actions"><button class="btn btn-sm" style="background:var(--red);color:#fff" onclick="openReportPreview('disease-timeline')"><i class="fa-regular fa-eye" style="margin-right:6px"></i>Generate Report Disease Timeline</button></div>
             </div>
         </div>
 
@@ -550,7 +559,7 @@
             </div>
             <div class="card-body">
                 <p>Comprehensive overview of tracking indicators logged in the system.</p>
-                <div class="report-actions"><button class="btn btn-sm" style="background:var(--orange);color:#fff" onclick="dlReport('immunization')">Download PDF</button></div>
+                <div class="report-actions"><button class="btn btn-sm" style="background:var(--orange);color:#fff" onclick="openReportPreview('immunization')"><i class="fa-regular fa-eye" style="margin-right:6px"></i>Generate Report Immunization</button></div>
             </div>
         </div>
 
@@ -563,8 +572,8 @@
                 </div>
             </div>
             <div class="card-body">
-                <p>Generates an AI-powered automated text brief summary via Gemini 2.5.</p>
-                <div class="report-actions"><button class="btn btn-sm" style="background:var(--purple);color:#fff" onclick="dlReport('ai-insights')">Download AI Report <i class="fa-solid fa-print" style="margin-left:6px"></i></button></div>
+                <p>Automated summary of disease trends, seasonal patterns, area monitoring, forecasts, and resource allocation for the dates selected above.</p>
+                <div class="report-actions"><button class="btn btn-sm" style="background:var(--purple);color:#fff" onclick="openReportPreview('ai-insights')"><i class="fa-regular fa-eye" style="margin-right:6px"></i>Generate Report AI Insights</button></div>
             </div>
         </div>
 
@@ -578,7 +587,7 @@
             </div>
             <div class="card-body">
                 <p>Compiled logs of Probable and Confirmed cases for local DOH PIDSR.</p>
-                <div class="report-actions"><button class="btn btn-sm" style="background:var(--teal);color:#fff" onclick="dlReport('surveillance')">Download PDF</button></div>
+                <div class="report-actions"><button class="btn btn-sm" style="background:var(--teal);color:#fff" onclick="openReportPreview('surveillance')"><i class="fa-regular fa-eye" style="margin-right:6px"></i>Generate Report Disease Surveillance</button></div>
             </div>
         </div>
 
@@ -592,7 +601,7 @@
             </div>
             <div class="card-body">
                 <p>Generates an official trail report of user activity logged in the system.</p>
-                <div class="report-actions"><button class="btn btn-sm" style="background:#475569;color:#fff" onclick="dlReport('audit')">Download PDF</button></div>
+                <div class="report-actions"><button class="btn btn-sm" style="background:#475569;color:#fff" onclick="openReportPreview('audit')"><i class="fa-regular fa-eye" style="margin-right:6px"></i>Generate Report Audit Trail</button></div>
             </div>
         </div>
 
@@ -606,7 +615,7 @@
             </div>
             <div class="card-body">
                 <p>Current stock levels with low-stock and expiry alerts, plus stock movements within the dates selected above.</p>
-                <div class="report-actions"><button class="btn btn-sm" style="background:#0e7490;color:#fff" onclick="dlReport('inventory')">Download PDF</button></div>
+                <div class="report-actions"><button class="btn btn-sm" style="background:#0e7490;color:#fff" onclick="openReportPreview('inventory')"><i class="fa-regular fa-eye" style="margin-right:6px"></i>Generate Report Inventory</button></div>
             </div>
         </div>
     </div>
@@ -650,7 +659,7 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>#</th><th>Disease</th><th>ICD Code</th><th>Category</th>
+                            <th>Disease</th><th>ICD Code</th><th>Category</th>
                             <th>Notifiable</th><th>Symptoms</th><th>Source</th><th>Status</th>
                             <th style="text-align:center">Actions</th>
                         </tr>
@@ -892,6 +901,26 @@
     </div>
 </div>
 
+<!-- ===== REPORT PREVIEW MODAL (Reports & Export) ===== -->
+<div class="modal-overlay" id="reportPreviewModal">
+    <div class="modal rp-modal" role="dialog" aria-modal="true" aria-labelledby="rpTitle">
+        <div class="modal-header">
+            <span class="modal-title" id="rpTitle">Report preview</span>
+            <button type="button" class="rp-x" onclick="closeReportPreview()" aria-label="Close preview"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="rp-body" id="rpBody"></div>
+        <div class="rp-footer">
+            <span class="rp-hint" id="rpHint"></span>
+            <div class="rp-actions">
+                <button type="button" class="btn rp-btn" onclick="closeReportPreview()">Close</button>
+                <button type="button" class="btn rp-btn" id="rpNewTab" onclick="rpNewTab()" style="display:none"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open in new tab</button>
+                <button type="button" class="btn rp-btn" id="rpDownload" onclick="rpDownload()" style="display:none"><i class="fa-solid fa-download"></i> Download PDF</button>
+                <button type="button" class="btn btn-primary rp-primary" id="rpPrint" onclick="rpPrint()" disabled><i class="fa-solid fa-print"></i> Print</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ===== EDIT PROFILE MODAL ===== -->
 <div class="modal-overlay" id="editProfileModal">
 <div class="modal">
@@ -1114,7 +1143,11 @@
     </div>
 </div>
 
-
+<div class="modal-overlay" id="caseModal"><div class="modal" style="max-width:640px">
+    <div class="modal-header"><div class="modal-title" id="cmTitle">Verify case</div><button class="modal-close" onclick="closeModal('caseModal')">&times;</button></div>
+    <div class="modal-body" id="cmBody"></div>
+    <div class="modal-footer" id="cmFooter"></div>
+</div></div>
 
 <!-- SESSION LOCK -->
 <div id="sessionLock" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
@@ -1132,15 +1165,13 @@
 
 <script src="../js/api.js"></script>
 <script src="../js/session.js"></script>
+<script src="../js/user-photo.js"></script>
 <script src="../js/ai-insights-engine.js"></script>
-<div class="modal-overlay" id="caseModal"><div class="modal" style="max-width:640px">
-    <div class="modal-header"><div class="modal-title" id="cmTitle">Verify case</div><button class="modal-close" onclick="closeModal('caseModal')">&times;</button></div>
-    <div class="modal-body" id="cmBody"></div>
-    <div class="modal-footer" id="cmFooter"></div>
-</div></div>
+<script src="../js/report-header.js"></script>
 <script src="../js/ai-insights.js"></script>
 <script src="../js/resource-engine.js"></script>
 <script src="../js/resource-insights.js"></script>
+<script src="../js/report-preview.js"></script>
 <script>
 /* ── LOAD MORE (limited table rows) ──
    Para hindi agad mahaba ang table: unang PAGE_SIZE rows lang ang ipapakita,
@@ -1277,45 +1308,6 @@ function initAnalyticsDateRange() {
 }
 initAnalyticsDateRange();
 
-/* ── Surveillance date-range filter ── */
-let survRangePicker;
-
-function initSurvDateRange() {
-    const rangeEl = document.getElementById('survDateRange');
-    const startEl = document.getElementById('survStartDate');
-    const endEl   = document.getElementById('survEndDate');
-    if (!rangeEl || !startEl || !endEl) return;
-
-    const today = new Date();
-    const jan1  = new Date(today.getFullYear(), 0, 1);
-
-    survRangePicker = new DateRangePicker(rangeEl, {
-        format: 'yyyy-mm-dd',
-        autohide: true,
-        todayHighlight: true,
-        maxDate: today,
-        prevArrow: '<i class="fa-solid fa-chevron-left"></i>',
-        nextArrow: '<i class="fa-solid fa-chevron-right"></i>'
-    });
-
-    survRangePicker.setDates(jan1, today);
-
-    startEl.addEventListener('changeDate', onSurvDateChange);
-    endEl.addEventListener('changeDate', onSurvDateChange);
-}
-initSurvDateRange();
-
-function onSurvDateChange() {
-    const startEl = document.getElementById('survStartDate');
-    const endEl   = document.getElementById('survEndDate');
-    if (!startEl.value || !endEl.value) return;
-    if (startEl.value > endEl.value) {
-        showToast('Start date must be before the end date.', 'error');
-        return;
-    }
-    loadSurveillance();
-}
-
 function onAnalyticsDateChange() {
     const startEl = document.getElementById('analyticsStartDate');
     const endEl   = document.getElementById('analyticsEndDate');
@@ -1417,7 +1409,6 @@ function renderDiseaseTable() {
     }
     renderLimitedRows('mdTableBody', mdDiseases.map((d, i) => `
         <tr style="${d.is_active ? '' : 'opacity:.55'}">
-            <td style="color:var(--muted);font-size:12px">${i + 1}</td>
             <td><div style="font-weight:600">${escapeHtml(d.disease_name)}</div>
                 <div style="font-size:11px;color:var(--muted)">${escapeHtml(d.aliases || '')}</div></td>
             <td>${escapeHtml(d.icd_code || '—')}</td>
@@ -2232,14 +2223,21 @@ const HUB_STATUS_DOT = { suspected:'#e74c3c', confirmed:'#27ae60', probable:'#f1
 function onHubMethodChange() {
     const fixed = document.getElementById('hubMethod').value === 'fixed';
     document.getElementById('hubComputedOpts').style.display = fixed ? 'none' : '';
-    document.getElementById('hubFixedOpts').style.display    = fixed ? '' : 'none';
+    document.getElementById('hubFixedOpts').style.display    = fixed ? 'flex' : 'none';
     document.getElementById('hubBaseWrap').style.display     = fixed ? 'none' : '';
     if (!fixed) loadSurvHub();
 }
 function toggleHubAdvanced() {
     const b = document.getElementById('hubAdvanced');
-    b.style.display = b.style.display === 'none' ? '' : 'none';
+    const open = b.style.display === 'none';          // nakatago ngayon → bubuksan
+    b.style.display = open ? '' : 'none';
+    const btn = document.getElementById('hubAdvBtn');
+    if (btn) {
+        btn.classList.toggle('active', open);          // active = icon na lang
+        btn.setAttribute('aria-expanded', open);
+    }
 }
+
 function hubParams() {
     const v = (id, d, lo, hi) => { const n = parseFloat(document.getElementById(id).value); return Math.min(hi, Math.max(lo, isNaN(n) ? d : n)); };
     return new URLSearchParams({
@@ -2364,79 +2362,8 @@ function renderHubChart() {
     });
 }
 
-/* ── SURVEILLANCE ── */
 async function loadSurveillance() {
-    const startDate = document.getElementById('survStartDate')?.value;
-    const endDate   = document.getElementById('survEndDate')?.value;
-    if (!startDate || !endDate) return;
-    const qs = `start_date=${startDate}&end_date=${endDate}`;
-    const rangeLabel = `${formatDisplayDate(startDate)} – ${formatDisplayDate(endDate)}`;
-    loadSurvHub();
-    try {
-        const data = await apiGet(`/api/analytics/surveillance?${qs}`);
-        if (!data) return;
-
-        // Stat cards
-        document.getElementById('survStats').innerHTML = `
-            <div class="stat-card blue"><div class="stat-icon"><i class="fa-solid fa-book-medical"></i></div>
-                <div class="stat-value">${data.grand_total}</div>
-                <div class="stat-label">Total Cases</div></div>
-            <div class="stat-card red"><div class="stat-icon"><i class="fa-solid fa-file-medical"></i></div>
-                <div class="stat-value">${data.diseases.length}</div>
-                <div class="stat-label">Diseases Recorded</div></div>
-            <div class="stat-card orange" style="grid-column:span 2"><div class="stat-icon"><i class="fa-solid fa-warning"></i></div>
-                <div class="stat-value" style="font-size:15px">${data.diseases[0]?.disease_name || 'N/A'}</div>
-                <div class="stat-label">Leading Disease</div></div>
-        `;
-
-        // Table
-        const tbody = document.getElementById('survTableBody');
-        if (!data.diseases.length) {
-            tbody.innerHTML = `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted)">No cases recorded for ${year}.</td></tr>`;
-        } else {
-            const max = data.diseases[0].total;
-            renderLimitedRows('survTableBody', data.diseases.map((d,i) => `
-                <tr>
-                    <td style="color:var(--muted);font-size:12px">${i+1}</td>
-                    <td><strong>${escapeHtml(d.disease_name)}</strong></td>
-                    <td><span class="badge badge-active" style="font-size:10px">${escapeHtml(d.category||'—')}</span></td>
-                    <td>
-                        <div style="display:flex;align-items:center;gap:8px">
-                            <strong>${d.total}</strong>
-                            <div style="flex:1;height:5px;background:var(--bg);border-radius:3px;max-width:70px">
-                                <div style="height:100%;width:${Math.round(d.total/max*100)}%;background:var(--blue);border-radius:3px"></div>
-                            </div>
-                        </div>
-                    </td>
-                    <td style="color:var(--muted);font-size:12px">${d.pct}%</td>
-                </tr>`), { reset: true });
-        }
-
-        // Trend chart in surveillance panel
-        const tTitle = document.getElementById('survTrendTitle');
-        if (tTitle) tTitle.textContent = `Trend • ${rangeLabel}`;
-        const tdata = await apiGet(`/api/analytics/disease-trends?${qs}`);
-        const ctx   = document.getElementById('survTrendChart');
-        if (ctx && tdata) {
-            destroyChart('survTrend');
-            charts['survTrend'] = new Chart(ctx, {
-                type: 'line',
-                data: { labels: tdata.labels, datasets: tdata.datasets.slice(0,5) },
-                options: {
-                    responsive:true, maintainAspectRatio:false,
-                    interaction:{ mode:'index', intersect:false },
-                    plugins: {
-                        legend:{ position:'bottom', labels:{ boxWidth:10, font:{ size:10 } } },
-                        datalabels:{ display:false }
-                    },
-                    scales: {
-                        x:{ grid:{ display:false }, ticks:{ font:{ size:9 } } },
-                        y:{ beginAtZero:true, ticks:{ font:{ size:9 } } }
-                    }
-                }
-            });
-        }
-    } catch(e) { showToast('Error loading surveillance.','error'); }
+    loadSurvHub();     // Live Disease Guard lang ang laman ng tab ngayon
 }
 
 /* ── ANALYTICS ── */
@@ -2825,10 +2752,14 @@ async function loadBHW() {
             const rc = ROLE_COLORS[u.role] || ROLE_COLORS.bhw;
             return `
             <tr>
-                <td style="color:var(--muted);font-size:12px">${i + 1}</td>
                 <td>
-                    <div style="font-weight:600">${escapeHtml(u.name)}</div>
-                    <div style="font-size:11px;color:var(--muted)">${escapeHtml(u.email)}</div>
+                    <div class="up-namecell">
+                        <span class="up-thumb" data-up-user="${u.user_id}" data-up-v="${u.photo_v || ''}" data-up-has="${u.has_photo ? 1 : 0}" data-up-initial="${escapeHtml((u.name || '?').charAt(0).toUpperCase())}">${escapeHtml((u.name || '?').charAt(0).toUpperCase())}</span>
+                        <div>
+                            <div style="font-weight:600">${escapeHtml(u.name)}</div>
+                            <div style="font-size:11px;color:var(--muted)">${escapeHtml(u.email)}</div>
+                        </div>
+                    </div>
                 </td>
                 <td style="font-size:12px;color:var(--muted)">${escapeHtml(u.email)}</td>
                 <td>
@@ -2878,6 +2809,7 @@ async function openEditStaff(userId) {
         document.getElementById('esRole').value     = u.role     || 'bhw';
         document.getElementById('esStatus').value   = u.status   || 'active';
         document.getElementById('esPosition').value = u.position || '';
+        if (window.UserPhoto) { UserPhoto.onStaffChange = () => loadBHW(); UserPhoto.bindStaff(u); }   // staff photo block
 
         const msgEl = document.getElementById('esSaveMsg');
         if (msgEl) msgEl.style.display = 'none';
@@ -3157,30 +3089,9 @@ async function loadAuditLogs() {
 }
 
 /* ── REPORTS ── */
-async function dlReport(type) {
-    const from = document.getElementById('reportStartDate')?.value || '';
-    const to   = document.getElementById('reportEndDate')?.value   || '';
-
-    // ISO yyyy-mm-dd strings compare correctly as plain strings
-    if (from && to && from > to) {
-        showToast('Start date must be on or before the end date.', 'error');
-        return;
-    }
-
-    showToast('Generating report...', 'info');
-    const today = toYMD(new Date());
-    const routes = {
-        'patients':         ['/api/reports/patients',          `patients_${today}.pdf`],
-        'disease-timeline': ['/api/reports/disease-timeline',  `disease_timeline_${today}.pdf`],
-        'immunization':     ['/api/reports/immunization',      `immunization_${today}.pdf`],
-        'ai-insights':      ['/api/reports/ai-insights',       `ai_insights_${today}.pdf`],
-        'surveillance':     ['/api/reports/surveillance',      `disease_surveillance_${today}.pdf`],
-        'audit':            ['/api/reports/audit-trail',       `audit_trail_${today}.pdf`],
-        'inventory':        ['/api/reports/inventory',         `inventory_${today}.pdf`],
-    };
-    const route = routes[type];
-    if (!route) return;                         // unknown report type
-    await downloadPDF(withReportDates(route[0]), route[1]);
+function dlReport(type) {
+    // Pinalitan ng preview: tingnan ang report muna, tapos print o i-download (js/report-preview.js)
+    return window.openReportPreview(type);
 }
 /* ── REPORTS: Central Date Filter Row (mutual overwrite) ── */
 
@@ -3223,16 +3134,28 @@ function withReportDates(url) {
     const start  = document.getElementById('reportStartDate');
     const end    = document.getElementById('reportEndDate');
     const preset = document.getElementById('quickPresets');
-    if (!start || !end || !preset) return;
+    const range  = document.getElementById('reportDateRange');
+    if (!start || !end || !preset || !range) return;
 
-    // Preset picked → overwrite dates
-    preset.addEventListener('change', () => applyReportPreset(preset.value));
+    // Fixed preset → itago ang date pickers; 'custom' → ipakita
+    const syncRangeVisibility = () => {
+        range.style.display = preset.value === 'custom' ? 'block' : 'none';
+    };
 
-    // Dates edited by hand → preset goes back to 'custom'.
-    // (Setting .value from code does not fire 'input', so there is no feedback loop.)
-    [start, end].forEach(el => el.addEventListener('input', () => { preset.value = 'custom'; }));
+    // Preset picked → overwrite dates, tapos itago o ipakita ang pickers
+    preset.addEventListener('change', () => {
+        applyReportPreset(preset.value);     // walang ginagawa kapag 'custom'
+        syncRangeVisibility();
+    });
+
+    // Dates edited by hand → balik sa 'custom'
+    [start, end].forEach(el => el.addEventListener('input', () => {
+        preset.value = 'custom';
+        syncRangeVisibility();
+    }));
 
     applyReportPreset(preset.value);         // initial fill (This Month)
+    syncRangeVisibility();
 })();
 
 /* ── FIRST-LOGIN LOCK ──

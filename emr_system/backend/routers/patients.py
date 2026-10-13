@@ -123,8 +123,8 @@ async def create_patient(
 
     required = ["last_name", "first_name", "birthdate", "sex", "address"]
     for field in required:
-        if not body.get(field):
-            raise HTTPException(status_code=400, detail=f"{field} is required.")
+        if not str(body.get(field) or "").strip():
+            raise HTTPException(status_code=400, detail=f"{field.replace('_', ' ').title()} is required.")
 
     # Validate birthdate not in future
     try:
@@ -217,6 +217,17 @@ async def update_patient(
         raise HTTPException(status_code=404, detail="Patient not found.")
 
     body = await request.json()
+    required = ("last_name", "first_name", "birthdate", "sex", "address")
+    for field in required:
+        if not str(body.get(field) or "").strip():
+            raise HTTPException(status_code=400, detail=f"{field.replace('_', ' ').title()} is required.")
+    try:
+        birthdate_value = date.fromisoformat(str(body.get("birthdate")))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Birthdate must be a valid date.")
+    if birthdate_value > date.today():
+        raise HTTPException(status_code=400, detail="Birthdate cannot be in the future.")
+
     fields = [
         "last_name","first_name","middle_name","birthdate","sex",
         "civil_status","address","contact_number","philhealth_no",

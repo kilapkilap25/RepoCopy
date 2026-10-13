@@ -69,6 +69,10 @@ async def create_medical_record(
     ).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found.")
+    if current_user.role == "doctor":
+        for field in ("visit_date", "symptoms", "diagnosis", "treatment"):
+            if not str(body.get(field) or "").strip():
+                raise HTTPException(status_code=400, detail=f"{field.replace('_', ' ').title()} is required for a doctor diagnosis.")
 
     rec = MedicalRecord(
         patient_id       = patient_id,
@@ -173,6 +177,11 @@ async def update_medical_record(
         )
 
     body = await request.json()
+    if current_user.role == "doctor":
+        for field in ("visit_date", "symptoms", "diagnosis", "treatment"):
+            value = body.get(field, getattr(record, field, None))
+            if not str(value or "").strip():
+                raise HTTPException(status_code=400, detail=f"{field.replace('_', ' ').title()} is required for a doctor diagnosis.")
 
     fields = [
         "visit_date",
@@ -253,21 +262,40 @@ async def create_immunization(
     current_user: User = Depends(require_permission('immunization', 'edit'))
 ):
     """Mag-record ng bagong immunization para sa pasyente."""
+    from datetime import datetime as datetime_type, date as date_type
+    from zoneinfo import ZoneInfo
     body = await request.json()
     patient_id = body.get("patient_id")
+    vaccine_name = str(body.get("vaccine_name") or "").strip()
+    if not vaccine_name:
+        raise HTTPException(status_code=400, detail="Vaccine name is required.")
+    try:
+        next_schedule = date_type.fromisoformat(str(body.get("next_schedule"))) if body.get("next_schedule") else None
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Next Schedule must be a valid date.")
+    # The EMR serves a Philippine barangay; use its local calendar date consistently.
+    today = datetime_type.now(ZoneInfo("Asia/Manila")).date()
+    if next_schedule and next_schedule < today:
+        raise HTTPException(status_code=400, detail="Next Schedule cannot be earlier than Date Given (today).")
+    try:
+        dose_number = int(body.get("dose_number", 1) or 1)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Dose Number must be a whole number from 1 to 10.")
+    if not 1 <= dose_number <= 10:
+        raise HTTPException(status_code=400, detail="Dose Number must be a whole number from 1 to 10.")
 
-    patient = db.query(Patient).filter(Patient.patient_id == patient_id).first()
+    patient = db.query(Patient).filter(Patient.patient_id == patient_id, Patient.is_archived == False).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found.")
 
     immun = Immunization(
         patient_id      = patient_id,
-        vaccine_name    = body.get("vaccine_name"),
-        date_given      = body.get("date_given"),
-        dose_number     = body.get("dose_number", 1),
+        vaccine_name    = vaccine_name,
+        date_given      = today,
+        dose_number     = dose_number,
         administered_by = body.get("administered_by"),
         batch_number    = body.get("batch_number"),
-        next_schedule   = body.get("next_schedule"),
+        next_schedule   = next_schedule,
         remarks         = body.get("remarks"),
         user_id         = current_user.user_id
     )
@@ -607,7 +635,7 @@ app.add_middleware(
 
 # Reject oversized patient-photo uploads BEFORE the request body is read.
 # (Registered before the security-headers middleware so that middleware still wraps this response.)
-_PHOTO_PATH        = re.compile(r"^/api/patients/\d+/photo$")
+_PHOTO_PATH        = re.compile(r"^/api/(patients|users)/\d+/photo$")
 _PHOTO_MAX_REQUEST = 3 * 1024 * 1024      # 2 MB file limit + multipart overhead
 
 @app.middleware("http")
@@ -629,6 +657,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-XSS-Protection"]       = "1; mode=block"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
+        "frame-src 'self' blob:; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
             "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "

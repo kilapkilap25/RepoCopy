@@ -223,7 +223,10 @@
     function showUnlockError(msg) {
         const el = $('unlockError');
         if (!el) return;
-        el.textContent = <i class="fa-solid fa-triangle-exclamation"></i> + msg;
+        el.textContent = '';
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-triangle-exclamation';
+        el.append(icon, ' ' + msg);
         el.style.display = 'block';
     }
 

@@ -280,19 +280,15 @@
     });
 
     /* ============ Export / print ============ */
-    function printReport() {
-        const r = R.result; if (!r) { showToast('Open the Resource Allocation tab first.', 'error'); return; }
-        const user = (typeof getCurrentUser === 'function' ? getCurrentUser() : {}) || {};
+    // Laman ng report (walang header/footer). Dapat R.result === r habang tinatawag.
+    function reportBodyHTML(r) {
         const S = r.summary, top = S.topMedicine, m0 = itemById(R.item) || top || r.used[0], d0 = diseaseByName(R.disease);
         const catImg = r.used.length ? imgOf(catConfig()) : '', topImg = r.used.length ? imgOf(topConfig(), 900, 300) : '';
         const itemImg = m0 ? imgOf(itemConfig(m0)) : '', stockImg = r.used.length ? imgOf(stockConfig(), 900, 300) : '';
         const assocImg = m0 && d0 ? imgOf(assocConfig(m0, d0)) : '';
         const trow = (arr, f) => arr.length ? arr.slice(0, 15).map(f).join('') : '';
         const usedRow = m => `<tr><td>${esc(m.name)}</td><td>${esc(m.category)}</td><td>${num(m.total)} ${esc(m.unit)}</td><td>${m.avgMonthly}</td><td>${TREND_TXT[m.trend.status]}${m.trend.pct != null && m.trend.status !== 'stable' && m.trend.status !== 'insufficient' ? ` (${m.trend.pct > 0 ? '+' : ''}${m.trend.pct}%)` : ''}</td><td>${num(m.stock.stock)}</td><td>${esc(m.stock.label)}</td></tr>`;
-        const html = `
-        <h1>Resource Allocation Analysis</h1>
-        <div class="p-meta"><div><b>Health center:</b> ${esc($('barangayLabel')?.textContent || '')}</div><div><b>Date range:</b> ${esc(rangeText())}</div>
-            <div><b>Generated:</b> ${esc(new Date().toLocaleString('en-PH', { dateStyle: 'long', timeStyle: 'short' }))}${user.name ? ' by ' + esc(user.name) : ''}</div></div>
+        return `
         <p class="p-note">Decision-support only. This report describes recorded inventory, dispensing, and disease data. It does not purchase, order, distribute, or change inventory. <b>Recorded Data</b> = quantities and stock stored in the system. <b>Observed Pattern</b> = a pattern found in historical records.</p>
 
         <h2>1. Frequently used resources</h2>
@@ -335,8 +331,16 @@
         <li>Usage counts only dispensed prescriptions. Vaccine doses come from Immunization records and are matched to inventory stock only when the name matches exactly one item.</li>
         <li>A medicine is linked to a disease only through dispensed prescriptions recorded with that disease (at least ${RE.CFG.minRxLink}). A common disease alone does not make a medicine necessary.</li>
         <li>No temperature or weather data is integrated. Warmer-month patterns describe recorded cases only and do not state that any month will be hotter.</li>
-        <li>Patterns describe past records, not predictions. This analysis does not purchase, order, distribute, or change inventory; final decisions remain with authorized health workers and administrators.</li></ul>
-        <div class="p-foot">Report generated ${esc(new Date().toLocaleDateString('en-PH', { dateStyle: 'long' }))} • ${esc(rangeText())}</div>`;
+        <li>Patterns describe past records, not predictions. This analysis does not purchase, order, distribute, or change inventory; final decisions remain with authorized health workers and administrators.</li></ul>`;
+    }
+
+    const RH = o => window.ReportHeader ? window.ReportHeader.html(o) : `<h1>${esc(o.title)}</h1>`;
+    const footHTML = () => `<div class="p-foot">Report generated ${esc(new Date().toLocaleDateString('en-PH', { dateStyle: 'long' }))} • ${esc(rangeText())}</div>`;
+
+    function printReport() {
+        const r = R.result; if (!r) { showToast('Open the Resource Allocation tab first.', 'error'); return; }
+        const html = RH({ title: 'Resource Allocation Analysis', start: r.range.start, end: r.range.end }) + reportBodyHTML(r) + footHTML();
+        if (window.ReportHeader) { window.ReportHeader.print(html); return; }
         let el = $('aiPrintReport'); if (!el) { el = document.createElement('div'); el.id = 'aiPrintReport'; document.body.appendChild(el); }
         el.innerHTML = html;
         document.body.classList.add('ai-printing');
@@ -344,4 +348,22 @@
         window.addEventListener('afterprint', done);
         setTimeout(() => window.print(), 200);
     }
+
+    /* Para sa Reports tab: seksyon ng Resource Allocation (heading na may numero) sa loob ng AI Data-Driven Insights Report */
+    window.ResourceUI.buildSection = async function (start, end, no) {
+        let data = null;
+        try { data = await apiGet(`/api/ai-insights/resources?start_date=${start}&end_date=${end}`); } catch (_) { }
+        if (!data || !Array.isArray(data.items)) throw new Error('Resource data could not be loaded.');
+        const result = RE.analyze(data, { start, end, today: new Date() });
+        const top = result.summary.topMedicine || result.used[0];
+        const saved = { result: R.result, item: R.item, disease: R.disease };      // huwag masira ang kasalukuyang tab
+        R.result = result;
+        R.item = top ? String(top.id) : '';
+        R.disease = (top && result.assoc.get(top.id).topDisease) || (result.diseases[0] || {}).name || '';
+        let body;
+        try { body = reportBodyHTML(result); }
+        finally { R.result = saved.result; R.item = saved.item; R.disease = saved.disease; }
+        const n = String(no || 1);
+        return `<h2>${n}. Resource Allocation Analysis</h2>` + body.replace(/<h2>(\d)\. /g, `<h2>${n}.$1 `);
+    };
 })();

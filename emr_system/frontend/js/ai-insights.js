@@ -289,23 +289,23 @@
     });
 
     /* ---------- export / print ---------- */
-    window.printAIInsights = function () {
-        if (S.tab === 'resources' && window.ResourceUI) { window.ResourceUI.print(); return; }   // Resource Allocation report
-        const r = S.result; if (!r) { showToast('Load AI Insights first.', 'error'); return; }
+    /* ---------- laman ng report: ginagamit ng FAB (print) at ng Reports tab (preview) ---------- */
+    // Header ng report (may logo). Kapag wala ang report-header.js, bumabalik sa simpleng pamagat.
+    const RH = o => window.ReportHeader ? window.ReportHeader.html(o) : `<h1>${esc(o.title)}</h1>`;
+    // Tinatawag habang ang S.result === r (ito ang binabasa ng chart builders).
+    function reportHTML(r, opts) {
+        opts = opts || {};
         const top = r.monitored.slice(0, 3), sea = r.seasonal, h = r.heat, A = E.analyzeArea(r, null);
         const trendImgs = (top.length ? top : [r.diseases[0]]).filter(Boolean).map(d => ({ d, img: imgOf(trendConfig(d)) }));
         const overview = imgOf(trendConfig(null));
         const areaImg = A.areas.length ? imgOf(areaConfig(A), 900, Math.max(180, Math.min(A.areas.length, 10) * 30 + 40)) : '';
         const seaImgs = [['all', 'All recorded diseases', []], ...sea.cards.filter(c => c.ev.cases > 0).map(c => [c.key, c.label, c.window.months])]
             .map(([k, l, m]) => ({ l, img: imgOf(seasonalConfig(sea.moy[k], m), 900, 220) }));
-        const user = (typeof getCurrentUser === 'function' ? getCurrentUser() : {}) || {};
         const fcRows = r.diseases.slice(0, 15).map(d => d.forecast.status === 'ok'
             ? `<tr><td>${esc(d.name)}</td><td>${CONF_TEXT[d.forecast.confidence]}</td><td>${d.forecast.points.map(p => `${esc(p.label)}: ${p.low}–${p.high}`).join('; ')}</td><td>${d.forecast.watch.length ? esc(d.forecast.watch.join(', ')) : '—'}</td></tr>`
             : `<tr><td>${esc(d.name)}</td><td colspan="3">Insufficient historical data for a reliable forecast</td></tr>`).join('');
-        const html = `
-        <h1>AI Insights Report</h1>
-        <div class="p-meta"><div><b>Health center:</b> ${esc($('barangayLabel')?.textContent || '')}</div><div><b>Date range:</b> ${esc(rangeText())}</div>
-            <div><b>Generated:</b> ${esc(new Date().toLocaleString('en-PH', { dateStyle: 'long', timeStyle: 'short' }))}${user.name ? ' by ' + esc(user.name) : ''}</div></div>
+        return `
+        ${RH({ title: opts.title || 'AI Insights Report', start: r.range.start, end: r.range.end })}
         <p class="p-note">Decision-support only. Findings describe patterns in recorded data. <b>Recorded Data</b> = cases stored in the system. <b>Observed Trend</b> = pattern found in historical records. <b>AI Forecast</b> = possible future pattern based on available data.</p>
 
         <h2>1. Disease trend analysis</h2>
@@ -332,17 +332,50 @@
         <h2>5. Forecasting results</h2>
         ${r.sufficiency.level === 'insufficient' ? `<p>${esc(r.sufficiency.message)}</p>` : `<table><thead><tr><th>Disease</th><th>Confidence</th><th>Possible cases per month (range)</th><th>Months for closer monitoring</th></tr></thead><tbody>${fcRows}</tbody></table>`}
 
-        <h2>6. Data limitations and confidence</h2>
+        ${opts.resourceHTML || ''}
+
+        <h2>${opts.resourceHTML ? 7 : 6}. Data limitations and confidence</h2>
         <ul><li><b>Data sufficiency:</b> ${esc(LEVEL_TEXT[r.sufficiency.level])}. ${esc(r.sufficiency.message)}</li>
         ${r.sufficiency.notes.map(n => `<li>${esc(n)}</li>`).join('')}
         <li>Forecasts are possible ranges, not certainties, and are shown only when enough history exists.</li>
         <li>Final interpretation and health decisions remain with authorized health workers.</li></ul>
         <div class="p-foot">Report generated ${esc(new Date().toLocaleDateString('en-PH', { dateStyle: 'long' }))} • ${esc(rangeText())}</div>`;
+    }
+
+    function printHTML(html) {
+        if (window.ReportHeader) { window.ReportHeader.print(html); return; }
         let el = $('aiPrintReport'); if (!el) { el = document.createElement('div'); el.id = 'aiPrintReport'; document.body.appendChild(el); }
         el.innerHTML = html;
         document.body.classList.add('ai-printing');
         const done = () => { document.body.classList.remove('ai-printing'); window.removeEventListener('afterprint', done); };
         window.addEventListener('afterprint', done);
         setTimeout(() => window.print(), 200);
+    }
+
+    window.printAIInsights = function () {
+        if (S.tab === 'resources' && window.ResourceUI) { window.ResourceUI.print(); return; }   // Resource Allocation report
+        const r = S.result; if (!r) { showToast('Load AI Insights first.', 'error'); return; }
+        printHTML(reportHTML(r));
+    };
+
+    /* ---------- Reports tab: buong AI Data-Driven Insights Report para sa napiling saklaw ---------- */
+    window.AIInsightsReport = {
+        async build(start, end) {
+            if (start > end) throw new Error('Start date must be on or before the end date.');
+            let data = null;
+            try { data = await apiGet(`/api/ai-insights/data?start_date=${start}&end_date=${end}`); } catch (_) { }
+            if (!data || !Array.isArray(data.rows)) throw new Error('AI Insights data could not be loaded. Confirm you are signed in as an administrator.');
+            const result = E.analyze(data.rows, { start, end });
+
+            // Resource Allocation bilang seksyon 6 (kung available ang module)
+            let resourceHTML = '';
+            if (window.ResourceUI && window.ResourceUI.buildSection) {
+                try { resourceHTML = await window.ResourceUI.buildSection(start, end, 6); }
+                catch (_) { resourceHTML = '<h2>6. Resource Allocation Analysis</h2><p>Resource data could not be loaded for this period, so this section is not included.</p>'; }
+            }
+            const saved = S.result; S.result = result;           // ginagamit ng chart builders
+            try { return reportHTML(result, { title: 'AI Data-Driven Insights Report', resourceHTML }); }
+            finally { S.result = saved; }
+        }
     };
 })();

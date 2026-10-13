@@ -11,6 +11,7 @@ from sqlalchemy import func, extract
 from typing import Optional
 from datetime import date, datetime, timedelta
 import io
+from pathlib import Path
 import pandas as pd
 
 from reportlab.lib import colors
@@ -19,8 +20,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, cm
 from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle, Paragraph,
-    Spacer, HRFlowable, KeepTogether
+    Spacer, HRFlowable, KeepTogether, Image
 )
+from reportlab.lib.utils import ImageReader
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
 from database import get_db
@@ -40,6 +42,25 @@ ACCENT_COLOR    = colors.HexColor('#e8f4f8')
 LIGHT_GREEN     = colors.HexColor('#e8f8f0')
 TEXT_DARK       = colors.HexColor('#1a1a2e')
 GRAY_LIGHT      = colors.HexColor('#f8f9fa')
+
+
+# Mga logo ng header (frontend/img). Kung wala ang file, hindi babagsak ang report; walang logo lang.
+LOGO_DIR = Path(__file__).resolve().parents[2] / "frontend" / "img"
+_LOGO_FILES = {
+    "seal": "logo-valenzuela-seal.png",      # City Government of Valenzuela
+    "bp":   "logo-bagong-pilipinas.png",     # Bagong Pilipinas
+    "vl":   "logo-valenzuelife.png",         # Valenzuelife
+}
+
+
+def _logo(key: str, height: float):
+    """Image na may tamang aspect ratio at ibinigay na taas, o None kung hindi mabasa."""
+    path = LOGO_DIR / _LOGO_FILES[key]
+    try:
+        iw, ih = ImageReader(str(path)).getSize()
+        return Image(str(path), width=height * iw / ih, height=height)
+    except Exception:
+        return None
 
 
 def create_pdf_header(elements: list, title: str, subtitle: str, date_range: str = ""):
@@ -79,18 +100,43 @@ def create_pdf_header(elements: list, title: str, subtitle: str, date_range: str
         alignment=TA_CENTER
     )
 
-    # Header content
-    elements.append(Paragraph("🏥 District 1 Health Office", subtitle_style))
-    elements.append(Paragraph(title, title_style))
-    elements.append(Paragraph(subtitle, subtitle_style))
+    # ── Header na may logo: [Seal ng Valenzuela + Bagong Pilipinas] | teksto | [Valenzuelife] ──
+    seal, bp, vl = _logo("seal", 1.9 * cm), _logo("bp", 1.9 * cm), _logo("vl", 1.5 * cm)
 
+    left_logos = [l for l in (seal, bp) if l is not None]
+    left = ""
+    if left_logos:
+        left = Table([left_logos], colWidths=[l.drawWidth + 0.25 * cm for l in left_logos], hAlign="LEFT")
+        left.setStyle(TableStyle([
+            ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0.25 * cm),
+            ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ]))
+    right = ""
+    if vl is not None:
+        vl.hAlign = "RIGHT"
+        right = vl
+
+    center = [
+        Paragraph("District 1 Health Office", subtitle_style),
+        Paragraph(title, title_style),
+        Paragraph(subtitle, subtitle_style),
+    ]
     if date_range:
-        elements.append(Paragraph(date_range, info_style))
-
-    elements.append(Paragraph(
+        center.append(Paragraph(date_range, info_style))
+    center.append(Paragraph(
         f"Generated on: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}",
         info_style
     ))
+
+    head = Table([[left, center, right]], colWidths=["26%", "48%", "26%"])
+    head.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (0, 0), (0, 0), "LEFT"), ("ALIGN", (2, 0), (2, 0), "RIGHT"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(head)
     elements.append(HRFlowable(width="100%", thickness=2, color=PRIMARY_COLOR))
     elements.append(Spacer(1, 0.2 * inch))
 

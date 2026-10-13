@@ -297,6 +297,75 @@ CREATE INDEX idx_inventory_transaction_item
 CREATE INDEX idx_inventory_transaction_date
     ON inventory_transactions (created_at);
 
+-- 1. Bagong table para sa lab tests at reviews ng mga kaso
+CREATE TABLE IF NOT EXISTS `case_reviews` (
+  `review_id` int(11) NOT NULL AUTO_INCREMENT,
+  `case_id` int(11) NOT NULL,
+  `reviewer_id` int(11) DEFAULT NULL,
+  `action` varchar(20) NOT NULL,
+  `status_after` varchar(20) NOT NULL,
+  `lab_test` varchar(100) DEFAULT NULL,
+  `lab_result` enum('Not done','Pending','Positive','Negative') NOT NULL DEFAULT 'Not done',
+  `notes` text DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`review_id`),
+  KEY `idx_case` (`case_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2. Bagong table para sa master list ng mga sintomas
+CREATE TABLE IF NOT EXISTS `symptom` (
+  `symptom_id` int(11) NOT NULL AUTO_INCREMENT,
+  `symptom_name` varchar(100) NOT NULL,
+  `synonyms` varchar(255) DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`symptom_id`),
+  UNIQUE KEY `symptom_name` (`symptom_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 3. Bagong table para sa pag-uugnay ng sakit at sintomas (Many-to-Many Mapping)
+CREATE TABLE IF NOT EXISTS `disease_symptom` (
+  `disease_id` int(11) NOT NULL,
+  `symptom_id` int(11) NOT NULL,
+  `weight` int(11) NOT NULL DEFAULT 1,
+  `is_key_symptom` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`disease_id`,`symptom_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- Sa TABLE: users (Idinagdag ang photo_filename)
+ALTER TABLE `users` ADD COLUMN `photo_filename` varchar(64) DEFAULT NULL AFTER `updated_at`;
+
+-- Sa TABLE: patient (Idinagdag ang photo_filename)
+ALTER TABLE `patient` ADD COLUMN `photo_filename` varchar(64) DEFAULT NULL AFTER `updated_at`;
+
+-- Sa TABLE: disease (Idinagdag ang aliases, description, is_active, at source)
+ALTER TABLE `disease` 
+  ADD COLUMN `aliases` varchar(500) DEFAULT NULL AFTER `created_at`,
+  ADD COLUMN `description` text DEFAULT NULL AFTER `aliases`,
+  ADD COLUMN `is_active` tinyint(1) NOT NULL DEFAULT 1 AFTER `description`,
+  ADD COLUMN `source` enum('manual','icd_import') NOT NULL DEFAULT 'manual' AFTER `is_active`;
+
+-- Sa TABLE: disease_cases (Idinagdag ang status, tagapag-verify, at escalation logs)
+ALTER TABLE `disease_cases` 
+  ADD COLUMN `case_status` enum('Suspected','Probable','Confirmed','Rejected') NOT NULL DEFAULT 'Confirmed' AFTER `created_at`,
+  ADD COLUMN `verified_by` int(11) DEFAULT NULL AFTER `case_status`,
+  ADD COLUMN `verified_at` datetime DEFAULT NULL AFTER `verified_by`,
+  ADD COLUMN `escalated_by` int(11) DEFAULT NULL AFTER `verified_at`,
+  ADD COLUMN `escalated_at` datetime DEFAULT NULL AFTER `escalated_by`,
+  ADD KEY `idx_cases_disease` (`disease_id`),
+  ADD KEY `idx_cases_date` (`date_recorded`),
+  ADD KEY `fk_disease_cases_verified_by` (`verified_by`),
+  ADD CONSTRAINT `fk_disease_cases_verified_by` FOREIGN KEY (`verified_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
+
+-- Sa TABLE: medical_records (Idinagdag ang follow_up_time at binago ang follow_up_required)
+ALTER TABLE `medical_records` 
+  ADD COLUMN `follow_up_time` time DEFAULT NULL AFTER `follow_up_date`,
+  ADD KEY `idx_record_patient` (`patient_id`),
+  ADD KEY `idx_record_visitdate` (`visit_date`);
+
+-- Sa TABLE: immunization (Idinagdag ang index para sa bilis ng query)
+ALTER TABLE `immunization` ADD KEY `idx_immun_patient` (`patient_id`);
+
 
 -- ============================================================
 -- SEED DATA FOR VEINTE REALES

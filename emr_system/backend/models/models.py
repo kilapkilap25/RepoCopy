@@ -31,6 +31,7 @@ class User(Base):
     failed_attempts = Column(Integer, nullable=False, default=0)
     locked_until    = Column(DateTime, nullable=True)
     last_login      = Column(DateTime, nullable=True)
+    photo_filename  = Column(String(64), nullable=True)   # staff photo (random .jpg name, file kept outside the frontend)
     created_at      = Column(DateTime, server_default=func.now())
     updated_at      = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

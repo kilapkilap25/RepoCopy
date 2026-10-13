@@ -1,0 +1,63 @@
+/* ============================================================
+   REPORT HEADER + REPORT PREVIEW MODAL
+   JS: js/report-header.js, js/report-preview.js
+   Hiwalay na file para hindi magalaw ang dashboard.css
+   ============================================================ */
+
+/* ── Header ng report (preview at print; kapareho ng PDF) ── */
+.rh { display: grid; grid-template-columns: 26% 1fr 26%; align-items: center; gap: 8px; margin: 0 0 4px; font-family: var(--font, system-ui, sans-serif); }
+.rh-side { display: flex; align-items: center; }
+.rh-left { justify-content: flex-start; gap: 8px; }
+.rh-right { justify-content: flex-end; }
+/* mas mataas ang specificity kaysa "#aiPrintReport img" para hindi lumaki ang logo */
+.rh img, #aiPrintReport .rh img, .rp-doc .rh img { height: 64px; width: auto; max-width: 100%; margin: 0; display: block; break-inside: avoid; }
+.rh-right img, #aiPrintReport .rh-right img, .rp-doc .rh-right img { height: 52px; }
+.rh-center { text-align: center; min-width: 0; }
+.rh-office { font-size: 12px; color: #1a8a5e; }
+.rh-title { font-size: 20px; font-weight: 700; color: #0a4f76; line-height: 1.2; margin: 2px 0; }
+.rh-brgy { font-size: 12px; color: #1a8a5e; }
+.rh-meta { font-size: 9.5px; color: #777; }
+.rh-rule { height: 2px; background: #0a4f76; margin: 8px 0 14px; }
+@media print { .rh, .rh-rule, .rh-title, .rh-office, .rh-brgy { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+/* ── Preview modal ── */
+.rp-modal { max-width: 1000px; width: 100%; height: 90vh; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+.rp-modal .modal-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; }
+.rp-x { border: 0; background: none; cursor: pointer; font-size: 18px; color: var(--muted); padding: 4px 8px; border-radius: 6px; }
+.rp-x:hover { background: var(--bg); color: var(--text); }
+.rp-body { flex: 1 1 auto; min-height: 0; overflow: auto; background: #eef1f7; padding: 16px; }
+.rp-body.is-pdf { padding: 0; overflow: hidden; }
+.rp-frame { width: 100%; height: 100%; border: 0; background: #fff; display: block; }
+.rp-footer { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 18px; border-top: 1px solid var(--border); background: var(--card); }
+.rp-hint { font-size: 12px; color: var(--muted); line-height: 1.4; max-width: 46ch; }
+.rp-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.rp-btn { background: #fff; border: 1px solid var(--border); color: var(--text); }
+.rp-btn:hover { background: var(--bg); }
+.rp-btn[disabled], .rp-primary[disabled] { opacity: .5; cursor: not-allowed; }
+.rp-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 260px; height: 100%; color: var(--muted); font-size: 13.5px; text-align: center; padding: 20px; }
+.rp-spin { width: 28px; height: 28px; border: 3px solid #d5def0; border-top-color: var(--navy, #0b1f4b); border-radius: 50%; animation: rpSpin .8s linear infinite; }
+@keyframes rpSpin { to { transform: rotate(360deg); } }
+.rp-err { color: #b42318; max-width: 54ch; line-height: 1.5; }
+
+/* ── On-screen "paper" para sa HTML reports (kapareho ng print rules ng #aiPrintReport) ── */
+.rp-paper { background: #fff; max-width: 820px; margin: 0 auto; padding: 36px 40px; border-radius: 4px; box-shadow: 0 2px 14px rgba(11, 31, 75, .14); }
+.rp-doc { font-family: var(--font, system-ui, sans-serif); color: #111; font-size: 12px; line-height: 1.55; }
+.rp-doc h1 { font-size: 20px; margin: 0 0 6px; color: #0b1f4b; }
+.rp-doc h2 { font-size: 14px; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 1.5px solid #0b1f4b; color: #0b1f4b; }
+.rp-doc h3 { font-size: 12px; margin: 12px 0 4px; color: #0b1f4b; }
+.rp-doc p { margin: 3px 0; }
+.rp-doc img { width: 100%; max-width: 100%; height: auto; display: block; margin: 6px 0; }
+.rp-doc table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 11px; }
+.rp-doc th, .rp-doc td { border: 1px solid #c9d3e6; padding: 4px 7px; text-align: left; vertical-align: top; }
+.rp-doc th { background: #eef2f9; text-transform: none; letter-spacing: 0; font-size: 11px; color: #0b1f4b; }
+.rp-doc ul { margin: 6px 0 6px 18px; padding: 0; }
+.rp-doc .p-note { color: #555; font-size: 11px; margin: 6px 0; }
+.rp-doc .p-ins { border: 1px solid #c9d3e6; border-left: 3px solid #0b1f4b; padding: 6px 10px; margin: 8px 0; }
+.rp-doc .p-foot { margin-top: 18px; padding-top: 6px; border-top: 1px solid #c9d3e6; font-size: 10px; color: #555; }
+
+@media (max-width: 700px) {
+    .rp-modal { height: 100vh; max-height: 100vh; border-radius: 0; }
+    .rp-paper { padding: 18px 16px; }
+    .rh { grid-template-columns: 1fr; justify-items: center; }
+    .rh-left, .rh-right { justify-content: center; }
+}

@@ -110,7 +110,8 @@ async function apiDelete(endpoint) {
  * @param {number} duration - Oras bago mawala (milliseconds)
  */
 function showToast(message, type = 'info', duration = 4000) {
-    const container = document.getElementById('toastContainer');
+    // The pages use id="toast-container"; older markup used "toastContainer". Support both so toasts actually show.
+    const container = document.getElementById('toast-container') || document.getElementById('toastContainer');
     if (!container) return;
 
     const icons = {

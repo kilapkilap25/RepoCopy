@@ -199,41 +199,41 @@ def get_client_info(request: Request) -> tuple[str, str]:
 # Permission matrix per role
 # Format: role -> {resource: "edit" | "view" | "none"}
 PERMISSIONS = {
-    "admin": {
-        "medical_records": "edit",
-        "immunization":    "edit",
-        "pregnancy":       "edit",
-        "health_problems": "edit",
-        "users":           "edit",
+    "admin":   {
+        "medical_records": "view", 
+        "immunization":    "view", 
+        "pregnancy":       "view", 
+        "health_problems": "view", 
+        "users":           "edit"
     },
     "bhw": {
-        "medical_records": "edit",
-        "immunization":    "edit",
-        "pregnancy":       "view",
-        "health_problems": "edit",
-        "users":           "none",
+        "medical_records": "edit", 
+        "immunization":    "view", 
+        "pregnancy":       "view", 
+        "health_problems": "view", 
+        "users":           "none"
     },
     "midwife": {
-        "medical_records": "view",
-        "immunization":    "none",
-        "pregnancy":       "edit",
-        "health_problems": "view",
-        "users":           "none",
+        "medical_records": "view", 
+        "immunization":    "view", 
+        "pregnancy":       "edit", 
+        "health_problems": "view", 
+        "users":           "none"
     },
     "doctor": {
-        "medical_records": "edit",
-        "immunization":    "edit",
-        "pregnancy":       "view",
-        "health_problems": "view",
-        "users":           "none",
-        },  
+        "medical_records": "edit", 
+        "immunization":    "view", 
+        "pregnancy":       "view", 
+        "health_problems": "edit",         
+        "users":           "none"
+    },
     "nurse": {
-        "medical_records": "view",
-        "immunization":    "view",
-        "pregnancy":       "view",
-        "health_problems": "view",
-        "users":           "none",
-},
+        "medical_records": "view", 
+        "immunization":    "edit", 
+        "pregnancy":       "view", 
+        "health_problems": "view", 
+        "users":           "none"
+    },
 }
 
 # ============================================================
@@ -241,7 +241,6 @@ PERMISSIONS = {
 # ============================================================
 
 SURVEILLANCE_PERMISSIONS = {
-
     "admin": {
 
         "view": True,
